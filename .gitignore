@@ -1,0 +1,12 @@
+*.png
+*.pdf
+*.mat
+*.aux
+*.log
+*.out
+*.gz
+*.asv
+*.zip
+*.m~
+Simulation Files SA/
+workspace
