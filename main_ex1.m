@@ -8,7 +8,7 @@ create_pdf = [0 0 0 0 ];    % for which plots should a pdf be created
 plot_ind   = [1 2 3 4 ];    % which data to plot on screen
 
 
-%% Task definition
+%% Task definition 
 Task = Task_Design();
 
 %Load the dynamic model of the quadcopter
