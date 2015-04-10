@@ -33,7 +33,7 @@ Visualize(sim_out_lqr,Model.param,'plot_mode',1);
 
 
 %% comment out to proceed to Problem 2
-return;
+%return;
 
 
 %% Problem 2: ILQC controller design 
