@@ -68,7 +68,7 @@ i  = 1;
 while ( i <= Task.max_iteration && ( norm(squeeze(duff)) > 0.01 || i == 1 ))
      
     %% Problem 2.1.1: forward pass / "rollout" of the current policy
-    % sim_out = ...
+    sim_out = Simulator(Model,Task,Controller);
     
     cost(i) = Calculate_Cost(sim_out, q_fun, qf_fun);
     fprintf('Cost of Iteration %2d (metric: ILQC cost function!): %6.4f \n', i-1, cost(i));
@@ -80,19 +80,18 @@ while ( i <= Task.max_iteration && ( norm(squeeze(duff)) > 0.01 || i == 1 ))
     end
     
     % define nominal state and control input trajectories
-    % X0 = ...
-    % U0 = ...
-    % T0 = ...
-    
+    X0 = sim_out.x;
+    U0 = sim_out.u;
+    T0 = sim_out.t;
 
       
     %% Problem 2.1.2: Solve Riccati-like equations backwards in time
     % Initialize the value function elements starting at final time step 
     % (Eq.(1.87)
     xf = X0(:,end); % final state when using current controller   
-    % Sm(:,:,n_t) = ...
-    % Sv(:,n_t)   = ...
-    % s(n_t)      = ...
+    Sm(:,:,n_t) = Qmf_fun(xf);
+    Sv(:,n_t)   = Qvf_fun(xf);
+    s(n_t)      = qf_fun(xf);
     
     % "Backward pass": Calculate the coefficients (s,Sv,Sm) for the value 
     % functions at earlier times by proceeding backwards in time (DP-approach)
@@ -101,37 +100,38 @@ while ( i <= Task.max_iteration && ( norm(squeeze(duff)) > 0.01 || i == 1 ))
         % state of system at time step n
         x0 = X0(:,n);
         u0 = U0(:,n);
+        t0 = T0(:,n);
               
         % Discretize and linearize continuous system dynamics Alin around
         % specific pair (xO,uO). See exercise sheet Eq.(4) for details
-        % A = ...;
-        % B = ...;
+        A = eye(12)+Model_Alin(x0,u0,Model_Param)*Task.dt;
+        B = Model_Blin(x0,u0,Model_Param)*Task.dt;
         
 
         % 2nd order approximation of cost function at time step n (Eq.(1.78))
-        % q   = ...
-        % Qv  = ...
-        % Qm  = ...
-        % Rv  = ...
-        % Rm  = ...
-        % Pm  = ...
+        q   = q_fun(t0,x0,u0);
+        Qv  = Qv_fun(t0,x0,u0);
+        Qm  = Qm_fun(t0,x0,u0);
+        Rv  = Rv_fun(t0,x0,u0);
+        Rm  = Rm_fun(t0,x0,u0);
+        Pm  = Pm_fun(t0,x0,u0);
         
         % control dependent terms of cost function (Eq.(1.81)) 
-        % g = ...                    % linear control dependent
-        % G = ...                    % control and state dependent
-        % H = ...                    % quadratic control dependent
+        g = Rv+B'*Sv(:,n+1);              % linear control dependent
+        G = Pm+B'*Sm(:,:,n+1)*A;                    % control and state dependent
+        H = Rm+B'*Sm(:,:,n+1)*B;                    % quadratic control dependent
         
         % ensuring H remains symmetric
         H = (H+H')/2; % important, do not delete!
              
         % the optimal change of the input trajectory du = duff + K*dx (Eq.(1.82)) 
-        % duff(:,:,n) = ...
-        % K(:,:,n)    = ...
+        duff(:,:,n) = -inv(H)*g;
+        K(:,:,n)    = -inv(H)*G;
                
         % Solve Riccati-like equations for current time step n (Eq.(1.84)
-        % Sm(:,:,n) = ...
-        % Sv(:,n) = ...
-        % s(n) = ...
+        Sm(:,:,n) = Qm+A'*Sm(:,:,n+1)*A+K(:,:,n)'*H*K(:,:,n)+K(:,:,n)'*G+G'*K(:,:,n); 
+        Sv(:,n) = Qv+A'*Sv(:,n+1)+K(:,:,n)'*H*duff(:,:,n)+K(:,:,n)'*g+G'*duff(:,:,n);
+        s(n) = q+s(n+1)+0.5*duff(:,:,n)'*H*duff(:,:,n)+duff(:,:,n)'*g;
               
     end % of backward pass for solving Riccati equation
     
@@ -169,11 +169,17 @@ function theta = Update_Controller(X0,U0,dUff,K)
 
 
 % feedforward control input theta_ff = U0 + dUff - K*X0
-% theta_ff = ...
+tmp=zeros(1,4,size(X0,2)-1);
+for i=1:size(X0,2)-1
+    tmp(1,:,i)=(K(:,:,i)*X0(:,i))';
+end
+tmp2=zeros(4,size(X0,2)-1,1);
+tmp2(:,:,1)=U0;
+tmp2=permute(tmp2,[3 1 2]);
+theta_ff =tmp2+permute(dUff,[2 1 3])-tmp;% (U0+dUff-K*X0);
 
 % feedback gain of control input
 theta_fb = permute(K,[2 1 3]);      
-
 % puts below (adds matrices along first(=row) dimension)
 theta = [theta_ff;        % size: (n_x+1) * n_u * n_t-1
          theta_fb];  

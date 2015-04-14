@@ -8,7 +8,7 @@ create_pdf = [0 0 0 0 ];    % for which plots should a pdf be created
 plot_ind   = [1 2 3 4 ];    % which data to plot on screen
 
 
-%% Task definition
+%% Task definition 
 Task = Task_Design();
 
 %Load the dynamic model of the quadcopter
@@ -33,7 +33,7 @@ Visualize(sim_out_lqr,Model.param,'plot_mode',1);
 
 
 %% comment out to proceed to Problem 2
-return;
+%return;
 
 
 %% Problem 2: ILQC controller design 

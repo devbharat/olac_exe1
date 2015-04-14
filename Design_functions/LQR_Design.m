@@ -12,17 +12,19 @@ function [LQR_Controller, Cost] = LQR_Design(Model,Task)
 % functions.
 
 % Define the state input around which the system dynamics should be linearized    
-% x_lin = ...
-% u_lin = ... % assume that most of the time the quadrotor flies similar to hovering (Fz != 0)
+gravConst=9.80665;
+x_lin = zeros(12,1);
+u_lin = [Model.param.mQ*gravConst 0 0 0]';% assume that most of the time the quadrotor flies similar to hovering (Fz != 0)
   
 % The linearized system dynamics matrices A_lin B_lin describe the dynamics
 % of the system around the equilibrium state. See exercise sheet Eq.(2) for 
 % usage example
-% A_lin = ...
-% B_lin = ...
+A_lin = Model.Alin{1}(x_lin,u_lin,Model.param.syspar_vec);
+B_lin = Model.Blin{1}(x_lin,u_lin,Model.param.syspar_vec);
 
 % Compute optimal LQR gain (see command 'lqr')
-% K = ...
+sys=ss(A_lin,B_lin,ones(1,size(A_lin,2)),0);
+[K,S,e] = lqr(sys,Task.cost.Q_lqr,Task.cost.R_lqr,zeros(size(B_lin)));
 
 
 %% Design the actual controller using the optimal feedback gains K
@@ -37,7 +39,7 @@ LQR_Controller.time    = Task.start_time:Task.dt:(Task.goal_time-Task.dt);
 %                         = [uff + K'x_ref, -K' ]' * [1,x']'
 %                         =        theta'          * BaseFnc
 
-lqr_type = 'goal_state';  % Choose 'goal_state or 'via_point'
+lqr_type = 'via_point';  % Choose 'goal_state or 'via_point'
 fprintf('LQR controller design type: %s \n', lqr_type);
 Nt = ceil((Task.goal_time - Task.start_time)/Task.dt+1);   
 switch lqr_type
@@ -45,8 +47,8 @@ switch lqr_type
         %% Problem 1.2: Drive system to Task.goal_x with LQR Gain + feedforward
         % Define equilibrium point x_eq correctly and use it to generate
         % feedforward torques (see exercise sheet Eq.(3)).
-        % x_ref = ...          % reference point the controller tries to reach
-        % theta = ...          % dimensions (13 x 4)
+        x_ref = Task.goal_x;          % reference point the controller tries to reach
+        theta = [u_lin+K*x_ref -K]';          % dimensions (13 x 4)
         
         % stack constant theta matrices for every time step Nt
         LQR_Controller.theta = repmat(theta,[1,1,Nt]);
@@ -58,11 +60,16 @@ switch lqr_type
         t1 = Task.vp_time;
         p1 = Task.vp1;           % steer towards this input until t1
         
-        % for t=1:Nt-1
-        %    ...
+        for t=1:Nt-1
+            if t*Task.dt<t1
+                x_ref=p1;         % reference point the controller tries to reach
+            else
+                x_ref = Task.goal_x; 
+            end
+            theta = [u_lin+K*x_ref -K]';  % dimensions (13 x 4)
         %    % varying theta matrices for every time step Nt 
-        %    LQR_Controller.theta(:,:,t) = ...
-        % end
+            LQR_Controller.theta(:,:,t) = theta;
+        end
         
     otherwise
         error('Unknown lqr_type');

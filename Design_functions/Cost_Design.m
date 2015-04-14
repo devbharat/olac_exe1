@@ -46,7 +46,7 @@ x = x_sym;
 u = u_sym;
 x_goal = Task.goal_x;
 
-ilqc_type = 'goal_state'; % Choose 'goal_state or 'via_point'
+ilqc_type = 'via_point'; % Choose 'goal_state or 'via_point'
 fprintf('ILQC cost function type: %s \n', ilqc_type);
 switch ilqc_type
     case 'goal_state'     
@@ -57,20 +57,23 @@ switch ilqc_type
                
     case 'via_point'
         %% Problem 2.2: Include a waypoint p1 in the ILQC cost function formulation
-        p1 = Task.vp1;      % p1 = Task.vp2 also try this one
+        p1 = Task.vp2;      % p1 = Task.vp2 also try this one
         t1 = Task.vp_time;
         
         % Define an approriate weighting for way points (see script Eq.(5))
         % Hint: Which weightings must be zero for the algorithm to
         % determine optimal values?
-        % Q_vp = ...
+        Q_vp = diag([[1 1 1],zeros(1,9)]);
         
         % don't penalize position deviations, drive system with final cost
         Cost.Qm(1:3,1:3) = zeros(3); 
                
         % Define symbolic cost function. Use fnct "viapoint(.)" below
-        % Cost.h = ...
-        % Cost.l = ... + viapoint_cost
+        Cost.h = simplify((x-x_goal)'*Cost.Qmf*(x-x_goal));
+        % Cost.l = ... + viapoint_cost 
+        Cost.l = simplify( ...
+             (x-Cost.x_eq)'*Cost.Qm*(x-Cost.x_eq) ...
+             + (u-Cost.u_eq)'*Cost.Rm*(u-Cost.u_eq))+viapoint(t1,p1,x,t_sym,Q_vp);
         
         
       otherwise
