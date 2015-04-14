@@ -46,7 +46,7 @@ x = x_sym;
 u = u_sym;
 x_goal = Task.goal_x;
 
-ilqc_type = 'via_point'; % Choose 'goal_state or 'via_point'
+ilqc_type = 'goal_state'; % Choose 'goal_state or 'via_point'
 fprintf('ILQC cost function type: %s \n', ilqc_type);
 switch ilqc_type
     case 'goal_state'     

@@ -39,7 +39,7 @@ LQR_Controller.time    = Task.start_time:Task.dt:(Task.goal_time-Task.dt);
 %                         = [uff + K'x_ref, -K' ]' * [1,x']'
 %                         =        theta'          * BaseFnc
 
-lqr_type = 'via_point';  % Choose 'goal_state or 'via_point'
+lqr_type = 'goal_state';  % Choose 'goal_state or 'via_point'
 fprintf('LQR controller design type: %s \n', lqr_type);
 Nt = ceil((Task.goal_time - Task.start_time)/Task.dt+1);   
 switch lqr_type
